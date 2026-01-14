@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>メモロビランキングメーカー</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: sans-serif;
+  background: #a3d8ff;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 32px;
+}
+
+h1 {
+  text-align: center;
+  color: #fff;
+  font-size: 1.8rem;
+  margin-bottom: 24px;
+}
+
+.wrap {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  max-width: 1100px;
+  width: 100%;
+}
+
+.panel {
+  width: 480px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+}
+
+h2 {
+  font-size: 1.2rem;
+  margin-bottom: 12px;
+  color: #0077cc;
+  text-align: center;
+}
+
+.searchContainer {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+#searchInput {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #cce7ff;
+  font-size: 1rem;
+}
+
+#clearSearchBtn {
+  border: none;
+  border-radius: 8px;
+  background: #ff6fa5;
+  color: #fff;
+  font-weight: 600;
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+.list {
+  padding: 6px;
+}
+
+#charList {
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+/* 共通カード */
+.item,
+.selectedItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  margin-bottom: 8px;
+  border: 1px solid #cce7ff;
+}
+
+.item {
+  background: #fefefe;
+}
+
+.selectedItem {
+  background: #f0f9ff;
+}
+
+/* 一覧：検索時のみ画像（小） */
+.item img {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+/* メモロビランキング：常に画像（16:9） */
+.selectedItem img {
+  width: 128px;
+  height: 72px;
+  border-radius: 10px;
+  object-fit: contain;
+  background: #00000010;
+  flex-shrink: 0;
+}
+
+.item strong,
+.selectedItem strong {
+  word-break: break-word;
+}
+
+button.addBtn,
+button.removeBtn {
+  background: #0077cc;
+  color: #fff;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 6px 12px;
+  border: none;
+  cursor: pointer;
+}
+
+.rankLabel {
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 20px;
+  background: #0077cc;
+  color: #fff;
+  min-width: 44px;
+  text-align: center;
+}
+
+.controls {
+  margin-top: 16px;
+  text-align: center;
+}
+
+#screenshotBtn {
+  background: #ff6fa5;
+  color: #fff;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .wrap {
+    flex-direction: column;
+    align-items: center;
+  }
+  .panel {
+    width: 90%;
+  }
+}
+</style>
+</head>
+
+<body>
+<div class="mainContainer">
+  <h1>ブルアカメモロビランキングメーカー</h1>
+
+  <div class="wrap">
+    <div class="panel">
+      <h2>キャラ一覧</h2>
+
+      <div class="searchContainer">
+        <input type="text" id="searchInput" placeholder="キャラ名で検索…">
+        <button id="clearSearchBtn">×</button>
+      </div>
+
+      <div class="list" id="charList"></div>
+    </div>
+
+    <div class="panel" id="rankingPanel">
+      <h2>メモロビランキング</h2>
+      <div class="list" id="selectedList"></div>
+      <div class="controls">
+        <button id="screenshotBtn">スクリーンショット</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+<script>
+/* ===== キャラデータ ===== */
+const characterList = [
+  {id: "char_1", name: "アイリ"},
+  {id: "char_2", name: "アイリ（バンド）"},
+  {id: "char_3", name: "アオバ"},
+  {id: "char_4", name: "アカネ"},
+  {id: "char_5", name: "アカネ（バニーガール）"},
+  {id: "char_6", name: "アカリ"},
+  {id: "char_7", name: "アカリ（正月）"},
+  {id: "char_8", name: "アコ"},
+  {id: "char_9", name: "アコ（ドレス）"},
+  {id: "char_10", name: "アズサ"},
+  {id: "char_11", name: "アズサ（水着）"},
+  {id: "char_12", name: "アスナ"},
+  {id: "char_13", name: "アスナ（バニーガール）"},
+  {id: "char_14", name: "アスナ（制服）"},
+  {id: "char_15", name: "アツコ"},
+  {id: "char_16", name: "アツコ（水着）"},
+  {id: "char_17", name: "アヤネ"},
+  {id: "char_18", name: "アヤネ（水着）"},
+  {id: "char_19", name: "アリス"},
+  {id: "char_20", name: "アリス（メイド）"},
+  {id: "char_21", name: "アル"},
+  {id: "char_22", name: "アル（正月）"},
+  {id: "char_23", name: "アル（ドレス）"},
+  {id: "char_24", name: "イオリ"},
+  {id: "char_25", name: "イオリ（水着）"},
+  {id: "char_26", name: "イズナ"},
+  {id: "char_27", name: "イズナ（水着）"},
+  {id: "char_28", name: "イズミ"},
+  {id: "char_29", name: "イズミ（水着）"},
+  {id: "char_30", name: "イズミ（正月）"},
+  {id: "char_31", name: "イチカ"},
+  {id: "char_32", name: "イチカ（水着）"},
+  {id: "char_33", name: "イブキ"},
+  {id: "char_34", name: "イロハ"},
+  {id: "char_35", name: "ウイ"},
+  {id: "char_36", name: "ウイ（水着）"},
+  {id: "char_37", name: "ウタハ"},
+  {id: "char_38", name: "ウタハ（応援団）"},
+  {id: "char_39", name: "ウミカ"},
+  {id: "char_40", name: "エイミ"},
+  {id: "char_41", name: "エイミ（水着）"},
+  {id: "char_42", name: "エリ"},
+  {id: "char_43", name: "カエデ"},
+  {id: "char_44", name: "カスミ"},
+  {id: "char_45", name: "カズサ"},
+  {id: "char_46", name: "カズサ（バンド）"},
+  {id: "char_47", name: "カノエ"},
+  {id: "char_48", name: "カホ"},
+  {id: "char_49", name: "カヨコ"},
+  {id: "char_50", name: "カヨコ（正月）"},
+  {id: "char_51", name: "カヨコ（ドレス）"},
+  {id: "char_52", name: "カリン"},
+  {id: "char_53", name: "カリン（バニーガール）"},
+  {id: "char_54", name: "カリン（制服）"},
+  {id: "char_55", name: "カンナ"},
+  {id: "char_56", name: "カンナ（水着）"},
+  {id: "char_57", name: "キキョウ"},
+  {id: "char_58", name: "キキョウ（水着）"},
+  {id: "char_59", name: "キサキ"},
+  {id: "char_60", name: "キララ"},
+  {id: "char_61", name: "キリノ"},
+  {id: "char_62", name: "キリノ（水着）"},
+  {id: "char_63", name: "ココナ"},
+  {id: "char_64", name: "コタマ"},
+  {id: "char_65", name: "コタマ（キャンプ）"},
+  {id: "char_66", name: "コトリ"},
+  {id: "char_67", name: "コトリ（応援団）"},
+  {id: "char_68", name: "コハル"},
+  {id: "char_69", name: "コハル（水着）"},
+  {id: "char_70", name: "コユキ"},
+  {id: "char_71", name: "サオリ"},
+  {id: "char_72", name: "サオリ（水着）"},
+  {id: "char_73", name: "サオリ（ドレス）"},
+  {id: "char_74", name: "サキ"},
+  {id: "char_75", name: "サキ（水着）"},
+  {id: "char_76", name: "サクラコ"},
+  {id: "char_77", name: "サクラコ（アイドル）"},
+  {id: "char_78", name: "サツキ"},
+  {id: "char_79", name: "サヤ"},
+  {id: "char_80", name: "サヤ（私服）"},
+  {id: "char_81", name: "シグレ"},
+  {id: "char_82", name: "シグレ（温泉）"},
+  {id: "char_83", name: "シズコ"},
+  {id: "char_84", name: "シズコ（水着）"},
+  {id: "char_85", name: "シミコ"},
+  {id: "char_86", name: "ジュリ"},
+  {id: "char_87", name: "ジュリ（アルバイト）"},
+  {id: "char_88", name: "シュン"},
+  {id: "char_89", name: "シュン（幼女）"},
+  {id: "char_90", name: "ジュンコ"},
+  {id: "char_91", name: "ジュンコ（正月）"},
+  {id: "char_92", name: "シロコ"},
+  {id: "char_93", name: "シロコ（ライディング）"},
+  {id: "char_94", name: "シロコ（水着）"},
+  {id: "char_95", name: "シロコ＊テラー"},
+  {id: "char_96", name: "スズミ"},
+  {id: "char_97", name: "スズミ（マジカル）"},
+  {id: "char_98", name: "スバル"},
+  {id: "char_99", name: "スミレ"},
+  {id: "char_100", name: "スミレ（アルバイト）"},
+  {id: "char_101", name: "セイア"},
+  {id: "char_102", name: "セイア（水着）"},
+  {id: "char_103", name: "セナ"},
+  {id: "char_104", name: "セナ（私服）"},
+  {id: "char_105", name: "セリカ"},
+  {id: "char_106", name: "セリカ（正月）"},
+  {id: "char_107", name: "セリカ（水着）"},
+  {id: "char_108", name: "セリナ"},
+  {id: "char_109", name: "セリナ（クリスマス）"},
+  {id: "char_110", name: "タカネ"},
+  {id: "char_111", name: "チアキ"},
+  {id: "char_112", name: "チェリノ"},
+  {id: "char_113", name: "チェリノ（温泉）"},
+  {id: "char_114", name: "チセ"},
+  {id: "char_115", name: "チセ（水着）"},
+  {id: "char_116", name: "チナツ"},
+  {id: "char_117", name: "チナツ（温泉）"},
+  {id: "char_118", name: "チヒロ"},
+  {id: "char_119", name: "ツクヨ"},
+  {id: "char_120", name: "ツクヨ（ドレス）"},
+  {id: "char_121", name: "ツバキ"},
+  {id: "char_122", name: "ツバキ（ガイド）"},
+  {id: "char_123", name: "ツルギ"},
+  {id: "char_124", name: "ツルギ（水着）"},
+  {id: "char_125", name: "トキ"},
+  {id: "char_126", name: "トキ（バニーガール）"},
+  {id: "char_127", name: "トモエ"},
+  {id: "char_128", name: "トモエ（チーパオ）"},
+  {id: "char_129", name: "ナギサ"},
+  {id: "char_130", name: "ナギサ（水着）"},
+  {id: "char_131", name: "ナグサ"},
+  {id: "char_132", name: "ナツ"},
+  {id: "char_133", name: "ナツ（バンド）"},
+  {id: "char_134", name: "ニヤ"},
+  {id: "char_135", name: "ネル"},
+  {id: "char_136", name: "ネル（バニーガール）"},
+  {id: "char_137", name: "ネル（制服）"},
+  {id: "char_138", name: "ノア"},
+  {id: "char_139", name: "ノア（パジャマ）"},
+  {id: "char_140", name: "ノゾミ"},
+  {id: "char_141", name: "ノドカ"},
+  {id: "char_142", name: "ノドカ（温泉）"},
+  {id: "char_143", name: "ノノミ"},
+  {id: "char_144", name: "ノノミ（水着）"},
+  {id: "char_145", name: "ハスミ"},
+  {id: "char_146", name: "ハスミ（体操服）"},
+  {id: "char_147", name: "ハスミ（水着）"},
+  {id: "char_148", name: "ハナエ"},
+  {id: "char_149", name: "ハナエ（クリスマス）"},
+  {id: "char_150", name: "ハナコ"},
+  {id: "char_151", name: "ハナコ（水着）"},
+  {id: "char_152", name: "ハルカ"},
+  {id: "char_153", name: "ハルカ（正月）"},
+  {id: "char_154", name: "ハルナ"},
+  {id: "char_155", name: "ハルナ（正月）"},
+  {id: "char_156", name: "ハルナ（体操服）"},
+  {id: "char_157", name: "ハレ"},
+  {id: "char_158", name: "ハレ（キャンプ）"},
+  {id: "char_159", name: "ヒカリ"},
+  {id: "char_160", name: "ヒナ"},
+  {id: "char_161", name: "ヒナ（水着）"},
+  {id: "char_162", name: "ヒナ（ドレス）"},
+  {id: "char_163", name: "ヒナタ"},
+  {id: "char_164", name: "ヒナタ（水着）"},
+  {id: "char_165", name: "ヒビキ"},
+  {id: "char_166", name: "ヒビキ（応援団）"},
+  {id: "char_167", name: "ヒフミ"},
+  {id: "char_168", name: "ヒフミ（水着）"},
+  {id: "char_169", name: "ヒマリ"},
+  {id: "char_170", name: "ヒヨリ"},
+  {id: "char_171", name: "ヒヨリ（水着）"},
+  {id: "char_172", name: "フィーナ"},
+  {id: "char_173", name: "フィーナ（ガイド）"},
+  {id: "char_174", name: "フウカ"},
+  {id: "char_175", name: "フウカ（正月）"},
+  {id: "char_176", name: "フブキ"},
+  {id: "char_177", name: "フブキ（水着）"},
+  {id: "char_178", name: "フユ"},
+  {id: "char_179", name: "ホシノ"},
+  {id: "char_180", name: "ホシノ（水着）"},
+  {id: "char_181", name: "ホシノ（臨戦）"},
+  {id: "char_182", name: "マキ"},
+  {id: "char_183", name: "マキ（キャンプ）"},
+  {id: "char_184", name: "マコト"},
+  {id: "char_185", name: "マシロ"},
+  {id: "char_186", name: "マシロ（水着）"},
+  {id: "char_187", name: "マリー"},
+  {id: "char_188", name: "マリー（体操服）"},
+  {id: "char_189", name: "マリー（アイドル）"},
+  {id: "char_190", name: "マリナ"},
+  {id: "char_191", name: "マリナ（チーパオ）"},
+  {id: "char_192", name: "ミカ"},
+  {id: "char_193", name: "ミカ（水着）"},
+  {id: "char_194", name: "ミサキ"},
+  {id: "char_195", name: "ミサキ（水着）"},
+  {id: "char_196", name: "ミチル"},
+  {id: "char_197", name: "ミチル（ドレス）"},
+  {id: "char_198", name: "ミドリ"},
+  {id: "char_199", name: "ミドリ（メイド）"},
+  {id: "char_200", name: "ミナ"},
+  {id: "char_201", name: "ミネ"},
+  {id: "char_202", name: "ミネ（アイドル）"},
+  {id: "char_203", name: "ミノリ"},
+  {id: "char_204", name: "ミモリ"},
+  {id: "char_205", name: "ミモリ（水着）"},
+  {id: "char_206", name: "ミヤコ"},
+  {id: "char_207", name: "ミヤコ（水着）"},
+  {id: "char_208", name: "ミユ"},
+  {id: "char_209", name: "ミユ（水着）"},
+  {id: "char_210", name: "ミヨ"},
+  {id: "char_211", name: "ムツキ"},
+  {id: "char_212", name: "ムツキ（正月）"},
+  {id: "char_213", name: "メグ"},
+  {id: "char_214", name: "メル"},
+  {id: "char_215", name: "モエ"},
+  {id: "char_216", name: "モエ（水着）"},
+  {id: "char_217", name: "モミジ"},
+  {id: "char_218", name: "モモイ"},
+  {id: "char_219", name: "モモイ（メイド）"},
+  {id: "char_220", name: "ヤクモ"},
+  {id: "char_221", name: "ユウカ"},
+  {id: "char_222", name: "ユウカ（体操服）"},
+  {id: "char_223", name: "ユウカ（パジャマ）"},
+  {id: "char_224", name: "ユカリ"},
+  {id: "char_225", name: "ユカリ（水着）"},
+  {id: "char_226", name: "ユズ"},
+  {id: "char_227", name: "ユズ（メイド）"},
+  {id: "char_228", name: "ヨシミ"},
+  {id: "char_229", name: "ヨシミ（バンド）"},
+  {id: "char_230", name: "ラブ"},
+  {id: "char_231", name: "リオ"},
+  {id: "char_232", name: "リツ"},
+  {id: "char_233", name: "ルミ"},
+  {id: "char_234", name: "レイ"},
+  {id: "char_235", name: "レイサ"},
+  {id: "char_236", name: "レイサ（マジカル）"},
+  {id: "char_237", name: "レイジョ"},
+  {id: "char_238", name: "レンゲ"},
+  {id: "char_239", name: "レンゲ（水着）"},
+  {id: "char_240", name: "ワカモ"},
+  {id: "char_241", name: "ワカモ（水着）"},
+  {id: "char_242", name: "初音ミク"},
+  {id: "char_243", name: "御坂美琴"},
+  {id: "char_244", name: "佐天涙子"},
+  {id: "char_245", name: "食蜂操祈"}
+];
+
+const MAX_SELECT = 10;
+let selected = [];
+
+/* ===== DOM ===== */
+const charListEl = document.getElementById("charList");
+const selectedListEl = document.getElementById("selectedList");
+const searchInput = document.getElementById("searchInput");
+const clearBtn = document.getElementById("clearSearchBtn");
+const screenshotBtn = document.getElementById("screenshotBtn");
+const rankingPanel = document.getElementById("rankingPanel");
+
+/* ===== 画像パス ===== */
+function getImagePath(char) {
+  const index = characterList.findIndex(c => c.id === char.id);
+  return `image/${index + 1}.png`;
+}
+
+/* ===== 一覧描画（検索中のみ画像表示） ===== */
+function renderAll(list = characterList) {
+  const showImage = searchInput.value.trim() !== "";
+  charListEl.innerHTML = "";
+
+  list.forEach(char => {
+    const el = document.createElement("div");
+    el.className = "item";
+
+    el.innerHTML = `
+      ${showImage ? `<img src="${getImagePath(char)}" alt="">` : ""}
+      <div style="flex:1"><strong>${escapeHtml(char.name)}</strong></div>
+      <button class="addBtn">追加</button>
+    `;
+
+    el.querySelector(".addBtn").onclick = () => addChar(char);
+    charListEl.appendChild(el);
+  });
+}
+
+/* ===== ランキング描画 ===== */
+function renderSelected() {
+  selectedListEl.innerHTML = "";
+
+  selected.forEach((char, idx) => {
+    const item = document.createElement("div");
+    item.className = "selectedItem";
+    item.draggable = true;
+    item.dataset.id = char.id;
+
+    item.innerHTML = `
+      <div class="rankLabel">${idx + 1}位</div>
+      <img src="${getImagePath(char)}" alt="">
+      <div style="flex:1"><strong>${escapeHtml(char.name)}</strong></div>
+      <button class="removeBtn">削除</button>
+    `;
+
+    item.querySelector(".removeBtn").onclick = () => removeChar(char.id);
+    item.addEventListener("dragstart", onDragStart);
+    item.addEventListener("dragover", e => e.preventDefault());
+    item.addEventListener("drop", onDrop);
+    item.addEventListener("dragend", onDragEnd);
+
+    selectedListEl.appendChild(item);
+  });
+}
+
+/* ===== 操作 ===== */
+function addChar(char) {
+  if (selected.find(c => c.id === char.id)) {
+    alert("すでに選択されています");
+    return;
+  }
+  if (selected.length >= MAX_SELECT) {
+    alert("選択できるのは10人までです");
+    return;
+  }
+  selected.push(char);
+  renderSelected();
+}
+
+function removeChar(id) {
+  selected = selected.filter(c => c.id !== id);
+  renderSelected();
+}
+
+/* ===== 並び替え ===== */
+let dragSrcId = null;
+
+function onDragStart() {
+  dragSrcId = this.dataset.id;
+  this.style.opacity = "0.4";
+}
+
+function onDrop() {
+  const targetId = this.dataset.id;
+  if (dragSrcId === targetId) return;
+
+  const from = selected.findIndex(c => c.id === dragSrcId);
+  const to = selected.findIndex(c => c.id === targetId);
+  const [moved] = selected.splice(from, 1);
+  selected.splice(to, 0, moved);
+  renderSelected();
+}
+
+function onDragEnd() {
+  this.style.opacity = "";
+  dragSrcId = null;
+}
+
+/* ===== 検索 ===== */
+searchInput.addEventListener("input", () => {
+  const key = searchInput.value.toLowerCase();
+  const filtered = characterList.filter(c =>
+    c.name.toLowerCase().includes(key)
+  );
+  renderAll(filtered);
+});
+
+clearBtn.onclick = () => {
+  searchInput.value = "";
+  renderAll();
+};
+
+/* ===== スクショ ===== */
+screenshotBtn.onclick = async () => {
+  if (selected.length === 0) {
+    alert("キャラを選択してください");
+    return;
+  }
+
+  document.querySelectorAll(".removeBtn").forEach(b => b.style.display = "none");
+  screenshotBtn.style.display = "none";
+
+  try {
+    const canvas = await html2canvas(rankingPanel, {
+      backgroundColor: "#fff"
+    });
+    const a = document.createElement("a");
+    a.download = "ranking.png";
+    a.href = canvas.toDataURL("image/png");
+    a.click();
+  } catch (e) {
+    alert("スクリーンショットの生成に失敗しました");
+    console.error(e);
+  } finally {
+    document.querySelectorAll(".removeBtn").forEach(b => b.style.display = "");
+    screenshotBtn.style.display = "";
+  }
+};
+
+/* ===== HTMLエスケープ ===== */
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"]/g, c =>
+    ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c])
+  );
+}
+
+renderAll();
+</script>
+</body>
+</html>
